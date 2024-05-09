@@ -4,6 +4,7 @@ import com.google.auth.oauth2.GoogleCredentials
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.database.FirebaseDatabase
+import com.google.gson.Gson
 import javafx.animation.FadeTransition
 import javafx.application.Application
 import javafx.application.Platform
@@ -23,26 +24,27 @@ import javafx.scene.text.Font
 import javafx.stage.Stage
 import javafx.util.Duration
 import org.example.OriginalData
+import java.io.File
 import java.io.FileInputStream
 import java.util.*
 
-
 class MainApplication : Application() {
-    private var depoNo="34"//To be changed later......
-    private var scheduleNo="100"
-    private var busType="TMP"
-    private var tripNo = "1"
-    private var departureTime = "06.20"
-    private var stPlace = ""
-    private var via = ""
-    private var destination = ""
-    private var arrivalTime = ""
-    private var kilometer = ""
-    private var etm = ""
+//    private var depoNo="34"//To be changed later......
+//    private var scheduleNo="100"
+//    private var busType="TMP"
+//    private var tripNo = "1"
+//    private var departureTime = "06.20"
+//    private var stPlace = ""
+//    private var via = ""
+//    private var destination = ""
+//    private var arrivalTime = ""
+//    private var kilometer = ""
+//    private var etm = ""
 
     override fun start(primaryStage: Stage) {
 
         initializeFirebase()
+        val appState = loadStateFromFile("appState.json")
 //        val database = FirebaseDatabase.getInstance()
 //        val myRef = database.getReference(depoNo)
 
@@ -77,13 +79,13 @@ class MainApplication : Application() {
         // Add the custom title bar and the button to the VBox
         vbox.children.addAll(customTitleBar)
         vbox.children.add(spacer)
-        addLabelAndTextField(vbox, "Trip No", tripNo, KeyboardType.NUMBER) { tripNo = it }
-        addLabelAndTextField(vbox, "Start Time", departureTime, KeyboardType.NUMBER) { departureTime = it }
-        addLabelAndTextField(vbox, "Start Place", stPlace) { stPlace = it }
-        addLabelAndTextField(vbox, "Via", via) { via = it }
-        addLabelAndTextField(vbox, "Destination", destination) { destination = it }
-        addLabelAndTextField(vbox, "Arrival Time", arrivalTime, KeyboardType.NUMBER) { arrivalTime = it }
-        addLabelAndTextField(vbox, "Kilometer", kilometer, KeyboardType.NUMBER) { kilometer = it }
+        addLabelAndTextField(vbox, "Trip No", appState.tripNo, KeyboardType.NUMBER) { appState.tripNo = it }
+        addLabelAndTextField(vbox, "Start Time", appState.departureTime, KeyboardType.NUMBER) { appState.departureTime = it }
+        addLabelAndTextField(vbox, "Start Place", appState.stPlace) { appState.stPlace = it }
+        addLabelAndTextField(vbox, "Via", appState.via) { appState.via = it }
+        addLabelAndTextField(vbox, "Destination", appState.destination) { appState.destination = it }
+        addLabelAndTextField(vbox, "Arrival Time", appState.arrivalTime, KeyboardType.NUMBER) { appState.arrivalTime = it }
+        addLabelAndTextField(vbox, "Kilometer", appState.kilometer, KeyboardType.NUMBER) { appState.kilometer = it }
         val optionalLabel = Label("Optional").apply {
             font = Font.font(18.0)
             textFill = Color.DARKGRAY
@@ -93,7 +95,7 @@ class MainApplication : Application() {
         vbox.children.add(optionalLabel)
         // Add a smaller spacer for additional separation
 
-        addLabelAndTextField(vbox, "ETM_root_No", etm, KeyboardType.NUMBER) { etm = it }
+        addLabelAndTextField(vbox, "ETM_root_No", appState.etm, KeyboardType.NUMBER) { appState.etm = it }
         val myButton = Button("UPLOAD")
         val smSpacer = Region().apply {
             prefHeight = 10.0
@@ -107,32 +109,23 @@ class MainApplication : Application() {
         myButton.padding = Insets(10.0, 0.0, 10.0, 0.0)
         myButton.setOnAction {
             val originalDatabase = OriginalData(
-                startPlace = stPlace,
-                via = via,
-                destinationPlace = destination,
-                departureTime = departureTime,
-                arrivalTime = arrivalTime,
-                kilometer = kilometer,
-                bustype = busType,
-                etmNo = etm
+                startPlace = appState.stPlace,
+                via = appState.via,
+                destinationPlace = appState.destination,
+                departureTime = appState.departureTime,
+                arrivalTime = appState.arrivalTime,
+                kilometer = appState.kilometer,
+                bustype = appState.busType,
+                etmNo = appState.etm
             )
             val database = FirebaseDatabase.getInstance()
-            val myRef = database.getReference(depoNo)
+            val myRef = database.getReference(appState.depoNo)
 
-                    myRef.child(busType).child(scheduleNo).child(tripNo)
+                    myRef.child(appState.busType).child(appState.scheduleNo).child(appState.tripNo)
             .setValue(originalDatabase) { error, _ ->
                 if (error == null) {
-                    // Operation successful
-                    // Reset fields upon success
-                    tripNo = ""
-                    stPlace = ""
-                    departureTime = ""
-                    via = ""
-                    destination = ""
-                    arrivalTime = ""
-                    kilometer = ""
-                    etm = ""
-                    // Provide user feedback, if needed
+                    //ON SUCCESS
+                    saveStateToFile("appState.json", appState)
                 } else {
                     // Handle failure
                    println("Failed to set value in Firebase: ${error.message}")
@@ -143,10 +136,6 @@ class MainApplication : Application() {
 
 
             println("Button clicked!")
-          //  val alert = Alert(Alert.AlertType.INFORMATION)
-           // alert.title = "Button Clicked"
-           // alert.headerText = null
-           // alert.contentText = "Verify upload later!"
             myButton.style = "-fx-background-color: green; -fx-text-fill: white;"
            // alert.showAndWait()
             val timer = Timer()
@@ -192,6 +181,20 @@ class MainApplication : Application() {
         primaryStage.scene = scene
         primaryStage.isResizable = false
         primaryStage.show()
+    }
+    private fun saveStateToFile(filePath: String, appState: AppState) {
+        val json = Gson().toJson(appState)
+        val file = File(filePath)
+        file.writeText(json)
+    }
+
+    private fun loadStateFromFile(filePath: String): AppState {
+        val file = File(filePath)
+        if (file.exists()) {
+            val json = file.readText()
+            return Gson().fromJson(json, AppState::class.java)
+        }
+        return AppState()
     }
     private fun initializeFirebase() {
         val serviceAccountPath = "C:/Users/abhi/Downloads/googleJsonKey.json"
