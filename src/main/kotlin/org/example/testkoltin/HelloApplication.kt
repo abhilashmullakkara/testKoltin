@@ -29,26 +29,9 @@ import java.io.FileInputStream
 import java.util.*
 
 class MainApplication : Application() {
-//    private var depoNo="34"//To be changed later......
-//    private var scheduleNo="100"
-//    private var busType="TMP"
-//    private var tripNo = "1"
-//    private var departureTime = "06.20"
-//    private var stPlace = ""
-//    private var via = ""
-//    private var destination = ""
-//    private var arrivalTime = ""
-//    private var kilometer = ""
-//    private var etm = ""
-
     override fun start(primaryStage: Stage) {
-
         initializeFirebase()
         val appState = loadStateFromFile("appState.json")
-//        val database = FirebaseDatabase.getInstance()
-//        val myRef = database.getReference(depoNo)
-
-
 
         val vbox = VBox()
             .apply {
@@ -79,6 +62,8 @@ class MainApplication : Application() {
         // Add the custom title bar and the button to the VBox
         vbox.children.addAll(customTitleBar)
         vbox.children.add(spacer)
+        friendaddLabelAndTextField(vbox,"Depo",appState.depoNo, keyboardType = KeyboardType.NUMBER){appState.depoNo=it}
+        friendaddLabelAndTextField(vbox,"schedule No",appState.scheduleNo,KeyboardType.NUMBER){appState.scheduleNo=it}
         addLabelAndTextField(vbox, "Trip No", appState.tripNo, KeyboardType.NUMBER) { appState.tripNo = it }
         addLabelAndTextField(vbox, "Start Time", appState.departureTime, KeyboardType.NUMBER) { appState.departureTime = it }
         addLabelAndTextField(vbox, "Start Place", appState.stPlace) { appState.stPlace = it }
@@ -213,6 +198,37 @@ class MainApplication : Application() {
         FirebaseApp.initializeApp(options)
     }
     // Helper function to add a label and a text field to the VBox
+
+    private fun friendaddLabelAndTextField(
+        vbox: VBox,
+        label: String,
+        initialValue: String,
+        keyboardType: KeyboardType = KeyboardType.DEFAULT,
+        onValueChange: (String) -> Unit
+    ) {
+        val myLabel = Label(label)
+        vbox.children.add(myLabel)
+
+        val textField = TextField().apply {
+            promptText = label
+            text = initialValue
+            prefWidth = 100.0  // Set the preferred width
+            maxWidth = 100.0
+            style = "-fx-text-fill: #D63604; -fx-pref-width: 175; -fx-pref-height: 51; -fx-padding: 0 0 0 10;"
+
+            if (keyboardType == KeyboardType.NUMBER) {
+                textProperty().addListener { _, _, newValue ->
+                    onValueChange(newValue)
+                }
+            } else {
+                textProperty().addListener { _, _, newValue ->
+                    onValueChange(newValue)
+                }
+            }
+        }
+
+        vbox.children.add(textField)
+    }
     private fun addLabelAndTextField(
         vbox: VBox,
         label: String,
